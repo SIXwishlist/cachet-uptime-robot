@@ -107,69 +107,6 @@ class CachetHq(object):
             content = response.read().decode('utf-8')
             return content
 
-    def set_data_metrics(self, value, timestamp, id_metric=1):
-        url = '{0}/api/v1/metrics/{1}/points'.format(
-            self.cachet_url,
-            id_metric
-        )
-
-        data = parse.urlencode({
-            'value': value,
-            'timestamp': timestamp,
-        }).encode('utf-8')
-        req = request.Request(
-            url=url,
-            data=data,
-            method='POST',
-            headers={'X-Cachet-Token': self.cachet_api_key},
-        )
-        response = request.urlopen(req)
-
-        return json.loads(response.read().decode('utf-8'))
-
-    def get_last_metric_point(self, id_metric):
-        url = '{0}/api/v1/metrics/{1}/points'.format(
-            self.cachet_url,
-            id_metric
-        )
-
-        req = request.Request(
-            url=url,
-            method='GET',
-            headers={'X-Cachet-Token': self.cachet_api_key}
-        )
-        response = request.urlopen(req)
-        content = response.read().decode('utf-8')
-
-        last_page = json.loads(
-            content
-        ).get('meta').get('pagination').get('total_pages')
-
-        url = '{0}/api/v1/metrics/{1}/points?page={2}'.format(
-            self.cachet_url,
-            id_metric,
-            last_page
-        )
-
-        req = request.Request(
-            url=url,
-            method='GET',
-            headers={'X-Cachet-Token': self.cachet_api_key},
-        )
-        response = request.urlopen(req)
-        content = response.read().decode('utf-8')
-
-        if json.loads(content).get('data'):
-            data = json.loads(content).get('data')[0]
-        else:
-            data = {
-                'created_at': datetime.now().date().strftime(
-                    '%Y-%m-%d %H:%M:%S'
-                )
-            }
-
-        return data
-
 
 class Monitor(object):
     def __init__(self, monitor_list, api_key):
@@ -181,7 +118,7 @@ class Monitor(object):
             Data sent is the value of last `Uptime`.
         """
         try:
-            website_config = self.monitor_list[monitor.get('url')]
+            website_config = self.monitor_list[str(monitor.get('id'))]
         except KeyError:
             print('ERROR: monitor is not valid')
             sys.exit(1)
@@ -197,13 +134,6 @@ class Monitor(object):
                 int(monitor.get('status'))
             )
 
-        metric = cachet.set_data_metrics(
-            monitor.get('custom_uptime_ratio'),
-            int(time.time()),
-            website_config['metric_id']
-        )
-        print('Metric created: {0}'.format(metric))
-
     def update(self):
         """ Update all monitors uptime and status.
         """
@@ -212,7 +142,7 @@ class Monitor(object):
         if success:
             monitors = response.get('monitors')
             for monitor in monitors:
-                if monitor['url'] in self.monitor_list:
+                if str(monitor['id']) in self.monitor_list:
                     print('Updating monitor {0}. URL: {1}. ID: {2}'.format(
                         monitor['friendly_name'],
                         monitor['url'],
@@ -238,10 +168,9 @@ if __name__ == "__main__":
         if element == 'uptimeRobot':
             uptime_robot_api_key = CONFIG[element]['UptimeRobotMainApiKey']
         else:
-            MONITOR_DICT[element] = {
+            MONITOR_DICT[str(element)] = {
                 'cachet_api_key': CONFIG[element]['CachetApiKey'],
                 'cachet_url': CONFIG[element]['CachetUrl'],
-                'metric_id': CONFIG[element]['MetricId'],
             }
             if 'ComponentId' in CONFIG[element]:
                 MONITOR_DICT[element].update({
