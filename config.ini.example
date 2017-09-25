@@ -1,0 +1,13 @@
+[uptimeRobot]
+UptimeRobotMainApiKey = abc
+
+; server 1
+[id]
+CachetApiKey = akikey
+CachetUrl = https://status.domain.tld
+ComponentId = 1
+
+[id2]
+CachetApiKey = apikey
+CachetUrl = https://status.domain.tld
+ComponentId = 2
